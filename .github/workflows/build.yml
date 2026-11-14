@@ -1,4 +1,5 @@
-ame: Build Convert to iPadOS APK
+# Place at .github/workflows/build.yml in a repo that also contains project.zip at its root.
+name: Build APK
 
 on:
   push:
@@ -10,38 +11,32 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Unzip Project.zip
-        run: |
-          unzip -q Project.zip -d project
-          # Support a zip that has the project at its root or inside one top-level folder
-          SETTINGS=$(find project -maxdepth 2 -name settings.gradle | head -n 1)
-          if [ -z "$SETTINGS" ]; then echo "settings.gradle not found in Project.zip"; exit 1; fi
-          echo "PROJECT_DIR=$(dirname "$SETTINGS")" >> "$GITHUB_ENV"
+      - name: Unzip Project
+        run: unzip -q Project.zip -d project
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: 17
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
+      - name: Accept Android licenses
+        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses || true
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: '8.2'
+          gradle-version: 8.9
 
       - name: Build debug APK
-        working-directory: ${{ env.PROJECT_DIR }}
-        run: gradle --no-daemon assembleDebug
+        working-directory: project
+        run: gradle assembleDebug --stacktrace --no-daemon
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: Convert-to-iPadOS-apk
-          path: ${{ env.PROJECT_DIR }}/app/build/outputs/apk/debug/*.apk
-          if-no-files-found: error
+          name: MagicLauncher-debug
+          path: project/app/build/outputs/apk/debug/*.apk
